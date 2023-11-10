@@ -1,21 +1,38 @@
 using Microsoft.AspNetCore.Mvc;
-
-
+using CodeCollab_FileService.Models;
 
 namespace CodeCollab_FileService.Controllers;
 
+
 [ApiController]
 [Route("/files")]
-public class FileController
+public class FileController : ControllerBase
 {
-    [HttpGet(Name = "GetFile")]
-    public string GetFile()
+    [HttpGet(Name = "GetFileContent")]
+    public string GetFileContent()
     {
-        Task<string> fileTask = GetFileContent("/home/rik/Projects/semester 6/CodeCollab/CodeCollab-FileService/Controllers/WeatherForecastController.cs");
+        Task<string> fileTask = GetFileContent("/home/rik/Documents/Fontys/semester 6/code/CodeCollab-backend/codecollab-backend/Controllers/FileController.cs");
         string fileContent = fileTask.Result;
         
         return fileContent;
     }
+    
+    // [Route("saveFile")]
+    [HttpPost]
+    public IActionResult SaveFile([FromBody] CodeFile codeFile)
+    {
+        // List<string> allowedFileTypes = new List<string>()
+        // {
+        //     "text/cs",
+        //     "audio/mpeg"
+        // };
+
+        Console.WriteLine(codeFile.fileName);
+        Console.WriteLine(codeFile.fileContent);
+
+        return Ok("success");
+    }
+    
 
     private async Task<string> GetFileContent(string filePath)
     {
