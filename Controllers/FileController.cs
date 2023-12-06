@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using CodeCollab_FileService.Models;
 
+using MongoDB.Bson;
+using MongoDB.Driver;
+
 namespace CodeCollab_FileService.Controllers;
 
 
@@ -17,20 +20,29 @@ public class FileController : ControllerBase
         return fileContent;
     }
     
-    // [Route("saveFile")]
-    [HttpPost]
+    
+    [HttpPost(Name = "SaveFile")]
     public IActionResult SaveFile([FromBody] CodeFile codeFile)
     {
-        // List<string> allowedFileTypes = new List<string>()
-        // {
-        //     "text/cs",
-        //     "audio/mpeg"
-        // };
+        try
+        {
+            string? connString = Environment.GetEnvironmentVariable("MONGODB_URI");
+            string databaseName = "CodeCollab-testing";
+            string collectionName = "CodeFiles";
 
-        Console.WriteLine(codeFile.fileName);
-        Console.WriteLine(codeFile.fileContent);
+            var client = new MongoClient(connString);
+            var collection = client.GetDatabase(databaseName).GetCollection<BsonDocument>(collectionName);
+            BsonDocument codeFileData = codeFile.ToBsonDocument();
+        
+            collection.InsertOne(codeFileData);
 
-        return Ok("success");
+            return Ok("success");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            return BadRequest("Could not save code file.");
+        }
     }
     
 
