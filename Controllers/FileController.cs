@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using CodeCollab_FileService.Models;
-
+using CodeCollab_FileService.Services;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -11,7 +11,10 @@ namespace CodeCollab_FileService.Controllers;
 [Route("/files")]
 public class FileController : ControllerBase
 {
-    [HttpGet(Name = "GetFileContent")]
+    private CodeFileService _service = new CodeFileService();
+    
+    
+    [HttpGet("GetFileContent", Name = "GetFileContent")]
     public string GetFileContent()
     {
         Task<string> fileTask = GetFileContent("/home/rik/Documents/Fontys/semester 6/code/CodeCollab-backend/codecollab-backend/Controllers/FileController.cs");
@@ -21,27 +24,43 @@ public class FileController : ControllerBase
     }
     
     
-    [HttpPost(Name = "SaveFile")]
+    [HttpPost("SaveFile", Name = "SaveFile")]
     public IActionResult SaveFile([FromBody] CodeFile codeFile)
     {
+        bool succes = _service.SaveFile(codeFile);
+
+        if (!succes) return BadRequest("Failed to save file.");    
+        return Ok("success");
+    }
+    
+    
+    [HttpPost("UploadFile", Name = "UploadFile")]
+    public async Task<IActionResult> UploadFile(IFormFile file, long userId, long workspaceId)
+    {
+        if (file == null || file.Length < 1)
+        {
+            return BadRequest("Uploaded file doesn't contain any content.");
+        }
+
+        CodeFile codeFile = new CodeFile(file.Name, userId: userId, workspaceId: workspaceId);
+
         try
         {
-            string? connString = Environment.GetEnvironmentVariable("MONGODB_URI");
-            string databaseName = "CodeCollab-testing";
-            string collectionName = "CodeFiles";
+            using (var streamReader = new StreamReader(file.OpenReadStream()))
+            {
+                var fileContent = await streamReader.ReadToEndAsync();
+                codeFile.fileContent = fileContent;
+            }
 
-            var client = new MongoClient(connString);
-            var collection = client.GetDatabase(databaseName).GetCollection<BsonDocument>(collectionName);
-            BsonDocument codeFileData = codeFile.ToBsonDocument();
-        
-            collection.InsertOne(codeFileData);
+            bool succes = _service.SaveFile(codeFile);
 
-            return Ok("success");
+            if (!succes) return BadRequest("Failed to save file.");
+            return Ok($"File was received successfully:\n\n{codeFile.fileContent}");
         }
         catch (Exception e)
         {
             Console.WriteLine(e.Message);
-            return BadRequest("Could not save code file.");
+            return BadRequest("Failed to read file contents.");
         }
     }
     
